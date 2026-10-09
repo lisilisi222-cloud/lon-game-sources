@@ -4,3 +4,11 @@ publish/
 dist/
 *.user
 *.suo
+
+# Never commit code-signing private keys or credential exports.
+*.pfx
+*.p12
+*.p8
+*.key
+*.jks
+*.keystore
