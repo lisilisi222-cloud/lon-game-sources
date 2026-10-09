@@ -8,7 +8,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $signTool = $env:L0N_SIGNTOOL_PATH
-$thumb = $env:L0N_SIGN_THUMBPRINT
+$thumb = if ($env:L0N_SIGN_THUMBPRINT) { $env:L0N_SIGN_THUMBPRINT } else { $env:L0N_SIGNER_THUMBPRINT }
 
 if (-not $signTool -or -not (Test-Path -LiteralPath $signTool)) {
   throw 'The Windows SDK SignTool executable is unavailable.'
