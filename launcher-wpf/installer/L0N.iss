@@ -29,6 +29,12 @@ RestartApplications=yes
 VersionInfoVersion=0.1.0.0
 VersionInfoDescription=L0N Game Launcher Setup
 WizardResizable=yes
+#ifdef L0N_SIGNING
+; Configured only for trusted, verified, CA-issued publisher credentials.
+; Inno Setup signs BOTH Setup.exe and the embedded uninstaller.
+SignTool=l0nsigner
+SignedUninstaller=yes
+#endif
 
 ; Only the explicitly approved signing workflow enables Authenticode signatures.
 #ifdef SIGNED_BUILD
