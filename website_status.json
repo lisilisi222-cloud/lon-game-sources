@@ -1,0 +1,20 @@
+[
+  {
+    "site": "SteamRIP",
+    "method": "wordpress",
+    "found": 100,
+    "status": "ok"
+  },
+  {
+    "site": "FitGirl",
+    "method": "wordpress",
+    "found": 100,
+    "status": "ok"
+  },
+  {
+    "site": "DODI",
+    "method": "wordpress",
+    "found": 98,
+    "status": "ok"
+  }
+]
