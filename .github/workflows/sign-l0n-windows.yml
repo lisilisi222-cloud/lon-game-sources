@@ -1,8 +1,9 @@
 name: Sign L0N Native Windows Release
 
-# This is intentionally manual-only. It never publishes "signed" artifacts
-# unless a real, trusted RSA code-signing certificate is configured and
-# all Authenticode checks pass. Do not use this workflow with test certificates.
+# Manual, approved releases from main only. A CA-issued RSA Code Signing
+# certificate must already be provisioned in the signing runner's USER store
+# via a non-exportable USB token, HSM or provider-backed Windows KSP.
+# Private keys, token PINs and PFX files are NEVER uploaded to GitHub.
 on:
   workflow_dispatch:
 
@@ -15,180 +16,145 @@ concurrency:
 
 jobs:
   sign-verify-and-package:
-    name: Build, sign and verify L0N on Windows
-    runs-on: windows-latest
+    name: Build, sign, and verify native Windows release
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Windows, X64, l0n-codesign]
     environment: code-signing
     timeout-minutes: 60
+    env:
+      # A thumbprint is public metadata, NOT a password or private key.
+      L0N_CERT_THUMBPRINT: ${{ vars.L0N_CERT_THUMBPRINT }}
 
     steps:
-      - name: Check out reviewed native source
+      - name: Check out reviewed main branch without persisted Git credentials
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
-      - name: Check that trusted signing credentials are configured
+      - name: Validate hardware/cloud-KSP signing identity
         shell: pwsh
-        env:
-          L0N_SIGNING_PFX_BASE64: ${{ secrets.L0N_SIGNING_PFX_BASE64 }}
-          L0N_SIGNING_PFX_PASSWORD: ${{ secrets.L0N_SIGNING_PFX_PASSWORD }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:L0N_SIGNING_PFX_BASE64) -or
-              [string]::IsNullOrWhiteSpace($env:L0N_SIGNING_PFX_PASSWORD)) {
-            throw "No trusted signing credentials are configured. See launcher-wpf/SIGNING.md. Do not publish unsigned files as signed."
+          $ErrorActionPreference = 'Stop'
+          $thumb = $env:L0N_CERT_THUMBPRINT
+          if ([string]::IsNullOrWhiteSpace($thumb) -or $thumb.Trim() -notmatch '^[0-9A-Fa-f]{40}$') {
+            throw 'code-signing environment variable L0N_CERT_THUMBPRINT is not configured.'
           }
-          if (-not (Test-Path "launcher-wpf/L0N.Launcher/L0N.Launcher.csproj")) {
-            throw "Readable WPF source was not found in the repository."
+          $thumb = $thumb.Trim().ToUpperInvariant()
+          $cert = Get-Item -Path ("Cert:\CurrentUser\My\" + $thumb) -ErrorAction Stop
+          if (-not $cert.HasPrivateKey) {
+            throw 'Non-exportable signing key is not accessible to the Windows runner identity.'
           }
-          Write-Output "Signing credentials are present; their contents were not printed."
+          if ($cert.Subject -eq $cert.Issuer) {
+            throw 'Self-signed certificates are not accepted for a public release.'
+          }
+          if ($cert.NotBefore -gt (Get-Date) -or $cert.NotAfter -lt (Get-Date)) {
+            throw 'Code signing certificate is not currently valid.'
+          }
+          if ($cert.PublicKey.Oid.Value -ne '1.2.840.113549.1.1.1') {
+            throw 'A publicly trusted RSA Code Signing certificate is required.'
+          }
+          $eku = @($cert.EnhancedKeyUsageList | Where-Object { $_.ObjectId -eq '1.3.6.1.5.5.7.3.3' })
+          if ($eku.Count -eq 0) { throw 'Certificate is missing Code Signing EKU.' }
+          $chain = [Security.Cryptography.X509Certificates.X509Chain]::new()
+          try {
+            $chain.ChainPolicy.RevocationMode = [Security.Cryptography.X509Certificates.X509RevocationMode]::Online
+            if (-not $chain.Build($cert)) {
+              $reasons = ($chain.ChainStatus | ForEach-Object { $_.StatusInformation.Trim() }) -join '; '
+              throw "Certificate trust/revocation verification failed: $reasons"
+            }
+          }
+          finally { $chain.Dispose() }
+
+          $kits = 'C:\Program Files (x86)\Windows Kits\10\bin'
+          $tool = @(Get-ChildItem $kits -Recurse -Filter signtool.exe -File -ErrorAction Stop |
+            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+            Sort-Object FullName -Descending | Select-Object -First 1)
+          if ($tool.Count -ne 1) { throw 'Windows SDK x64 signtool.exe is required on the dedicated runner.' }
+
+          "L0N_SIGNER_THUMBPRINT=$thumb" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          "L0N_SIGNTOOL_PATH=$($tool[0].FullName)" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Output 'PASS: Approved Code Signing certificate is available through the runner key provider.'
 
       - name: Install .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Run native C# smoke tests
-        working-directory: launcher-wpf
-        run: dotnet run --configuration Release --project tests/L0N.Core.SmokeTests/L0N.Core.SmokeTests.csproj
-
-      - name: Compile self-contained native Windows app
-        working-directory: launcher-wpf
-        run: dotnet publish L0N.Launcher/L0N.Launcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None --output publish
-
-      - name: Test unsigned build before signing
+      - name: Run L0N Core smoke tests
         working-directory: launcher-wpf
         shell: pwsh
         run: |
-          $appPath = (Resolve-Path "publish/L0N.GameLauncher.exe").Path
-          $proc = Start-Process -FilePath $appPath -ArgumentList "--selftest" -PassThru
-          if (-not $proc.WaitForExit(30000)) {
-            Stop-Process -Id $proc.Id -Force
-            throw "Native app self-test timed out"
-          }
-          if ($proc.ExitCode -ne 0) {
-            throw "Native app self-test failed with exit code $($proc.ExitCode)"
-          }
+          dotnet run --configuration Release --project tests/L0N.Core.SmokeTests/L0N.Core.SmokeTests.csproj
+          if ($LASTEXITCODE -ne 0) { throw 'Core smoke tests failed.' }
 
-      - name: Import trusted certificate and sign native L0N.exe
-        working-directory: launcher-wpf
-        shell: pwsh
-        env:
-          L0N_SIGNING_PFX_BASE64: ${{ secrets.L0N_SIGNING_PFX_BASE64 }}
-          L0N_SIGNING_PFX_PASSWORD: ${{ secrets.L0N_SIGNING_PFX_PASSWORD }}
-        run: |
-          $ErrorActionPreference = "Stop"
-          $tool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin" -Filter signtool.exe -Recurse -File |
-            Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
-            Sort-Object FullName -Descending | Select-Object -First 1
-          if (-not $tool) { throw "Windows SDK SignTool x64 was not found" }
-          $signToolPath = $tool.FullName
-
-          $pfxPath = Join-Path $env:RUNNER_TEMP "l0n-signing-temporary.pfx"
-          try {
-            [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:L0N_SIGNING_PFX_BASE64.Trim()))
-            $password = ConvertTo-SecureString $env:L0N_SIGNING_PFX_PASSWORD -AsPlainText -Force
-            $imported = @(Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password)
-            $cert = $imported | Where-Object { $_.HasPrivateKey -and $_.PublicKey.Oid.Value -eq "1.2.840.113549.1.1.1" } |
-              Select-Object -First 1
-            if (-not $cert) { throw "No RSA code-signing certificate with a usable private key was found" }
-            if ($cert.NotBefore -gt (Get-Date) -or $cert.NotAfter -lt (Get-Date)) {
-              throw "The code-signing certificate is not currently valid"
-            }
-            $codeSigningOid = "1.3.6.1.5.5.7.3.3"
-            $eku = $cert.Extensions |
-              Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] } |
-              Select-Object -First 1
-            if (-not $eku) { throw "No Enhanced Key Usage extension was found on the signing certificate" }
-            $allowed = @($eku.EnhancedKeyUsages | Where-Object { $_.Value -eq $codeSigningOid })
-            if ($allowed.Count -eq 0) {
-              throw "The supplied certificate is not valid for Authenticode code signing"
-            }
-
-            $thumb = $cert.Thumbprint
-            $appPath = (Resolve-Path "publish/L0N.GameLauncher.exe").Path
-            & $signToolPath sign /sha1 $thumb /s My /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $appPath
-            if ($LASTEXITCODE -ne 0) { throw "Signing L0N.GameLauncher.exe failed" }
-            & $signToolPath verify /pa /v /tw $appPath
-            if ($LASTEXITCODE -ne 0) { throw "L0N.GameLauncher.exe signature is not trusted or valid" }
-
-            # Only the public certificate thumbprint and tool path are passed to later steps.
-            "L0N_SIGNER_THUMBPRINT=$thumb" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-            "L0N_SIGNTOOL_PATH=$signToolPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-            Write-Output "PASS: native app signed, time-stamped, and verified with a trusted RSA certificate"
-          }
-          finally {
-            if (Test-Path $pfxPath) { Remove-Item $pfxPath -Force }
-          }
-
-      - name: Install Inno Setup 6
-        shell: pwsh
-        run: |
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) {
-            choco install innosetup -y --no-progress
-            if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
-          }
-          if (-not (Test-Path $iscc)) { throw "ISCC.exe was not found" }
-
-      - name: Create signed installer and signed uninstaller
+      - name: Publish native self-contained Windows x64 executable
         working-directory: launcher-wpf
         shell: pwsh
         run: |
-          $ErrorActionPreference = "Stop"
-          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-          $helper = (Resolve-Path "scripts/sign-inno-output.ps1").Path
+          dotnet publish L0N.Launcher/L0N.Launcher.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None --output publish
+          if ($LASTEXITCODE -ne 0) { throw 'Native publish failed.' }
+          if (-not (Test-Path 'publish/L0N.GameLauncher.exe')) { throw 'Native executable missing.' }
+
+      - name: Sign and verify L0N.GameLauncher.exe
+        working-directory: launcher-wpf
+        shell: pwsh
+        run: |
+          $app = (Resolve-Path 'publish/L0N.GameLauncher.exe').Path
+          & $env:L0N_SIGNTOOL_PATH sign /sha1 $env:L0N_SIGNER_THUMBPRINT /s My /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $app
+          if ($LASTEXITCODE -ne 0) { throw 'Signing the native EXE failed.' }
+          & ./signing/Verify-L0N-Authenticode.ps1 -Path $app -SignerThumbprint $env:L0N_SIGNER_THUMBPRINT -SignToolPath $env:L0N_SIGNTOOL_PATH
+
+      - name: Confirm Inno Setup 6 is installed
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe')) {
+            throw 'Install Inno Setup 6 on the dedicated signing runner before starting a release.'
+          }
+
+      - name: Sign Inno Setup and embedded uninstaller
+        working-directory: launcher-wpf
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          $helper = (Resolve-Path 'scripts/sign-inno-output.ps1').Path
           $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
-          if (-not $env:L0N_SIGNTOOL_PATH -or -not $env:L0N_SIGNER_THUMBPRINT) {
-            throw "Verified signing identity was not imported"
-          }
-          # The Inno script uses conditional SIGNED_BUILD directives:
-          # SignTool=l0nauth, SignedUninstaller=yes.
-          # $q is replaced with quotation marks and $f with each file path.
-          # Passwords and private keys are never placed into command-line args.
           $signCommand = '$q' + $pwshPath + '$q -NoProfile -NonInteractive -File $q' + $helper + '$q $f'
           & $iscc '/DSIGNED_BUILD' ("/Sl0nauth=" + $signCommand) 'installer\L0N.iss'
-          if ($LASTEXITCODE -ne 0) { throw "Inno Setup signing failed" }
+          if ($LASTEXITCODE -ne 0) { throw 'Signing Inno Setup or the embedded uninstaller failed.' }
+          & ./signing/Verify-L0N-Authenticode.ps1 -Path 'dist/L0N_Game_Launcher_Setup.exe' -SignerThumbprint $env:L0N_SIGNER_THUMBPRINT -SignToolPath $env:L0N_SIGNTOOL_PATH
 
-          $setup = (Resolve-Path "dist/L0N_Game_Launcher_Setup.exe").Path
-          & $env:L0N_SIGNTOOL_PATH verify /pa /all /v /tw $setup
-          if ($LASTEXITCODE -ne 0) { throw "Setup.exe does not have a valid, trusted signature" }
-          Write-Output "PASS: signed installer and signed embedded uninstaller created"
-
-      - name: Test signed installation, installed EXE, and signed uninstaller
+      - name: Verify signed installed EXE and signed uninstaller
         working-directory: launcher-wpf
         shell: pwsh
         run: |
-          $setup = (Resolve-Path "dist/L0N_Game_Launcher_Setup.exe").Path
-          $installDir = Join-Path $env:RUNNER_TEMP "L0N signed CI install"
-          $arguments = @("/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/CURRENTUSER",('/DIR="' + $installDir + '"'))
-          $installer = Start-Process -FilePath $setup -ArgumentList $arguments -PassThru -Wait
-          if ($installer.ExitCode -ne 0) { throw "Signed Setup installer returned $($installer.ExitCode)" }
-
-          $app = Join-Path $installDir "L0N.GameLauncher.exe"
-          if (-not (Test-Path $app)) { throw "Signed installed application not found" }
-          & $env:L0N_SIGNTOOL_PATH verify /pa /v /tw $app
-          if ($LASTEXITCODE -ne 0) { throw "Installed L0N.exe signature failed verification" }
-
-          $uninstallers = @(Get-ChildItem $installDir -Filter "unins*.exe" -File)
-          if ($uninstallers.Count -eq 0) { throw "Signed uninstaller executable not found" }
-          foreach ($uninstaller in $uninstallers) {
-            & $env:L0N_SIGNTOOL_PATH verify /pa /v /tw $uninstaller.FullName
-            if ($LASTEXITCODE -ne 0) { throw "Installed uninstaller signature verification failed" }
-          }
-
-          $test = Start-Process -FilePath $app -ArgumentList "--selftest" -PassThru
+          $setup = (Resolve-Path 'dist/L0N_Game_Launcher_Setup.exe').Path
+          $installDir = Join-Path $env:RUNNER_TEMP 'L0N signed CI install'
+          $args = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /DIR="' + $installDir + '"'
+          $installer = Start-Process -FilePath $setup -ArgumentList $args -PassThru -Wait
+          if ($installer.ExitCode -ne 0) { throw "Signed installer failed: $($installer.ExitCode)" }
+          $app = Join-Path $installDir 'L0N.GameLauncher.exe'
+          if (-not (Test-Path -LiteralPath $app)) { throw 'Installed executable missing.' }
+          $uninstallers = @(Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' -File)
+          if ($uninstallers.Count -eq 0) { throw 'Signed uninstaller missing.' }
+          $targets = @($app) + @($uninstallers | ForEach-Object { $_.FullName })
+          & ./signing/Verify-L0N-Authenticode.ps1 -Path $targets -SignerThumbprint $env:L0N_SIGNER_THUMBPRINT -SignToolPath $env:L0N_SIGNTOOL_PATH
+          $test = Start-Process -FilePath $app -ArgumentList '--selftest' -PassThru
           if (-not $test.WaitForExit(30000)) {
             Stop-Process -Id $test.Id -Force
-            throw "Installed native app self-test timed out"
+            throw 'Installed native app self-test timed out.'
           }
-          if ($test.ExitCode -ne 0) { throw "Installed native app self-test failed" }
-          Write-Output "PASS: trusted signatures, Windows installation, uninstaller and native app self-test"
+          if ($test.ExitCode -ne 0) { throw 'Installed native app self-test failed.' }
+          Write-Output 'PASS: Installed app, setup, and uninstaller signatures and smoke test.'
 
-      - name: Print hashes for signed final binaries
+      - name: Record final signed SHA256 hashes
         working-directory: launcher-wpf
         shell: pwsh
         run: |
-          Get-FileHash "publish/L0N.GameLauncher.exe" -Algorithm SHA256 | Format-List
-          Get-FileHash "dist/L0N_Game_Launcher_Setup.exe" -Algorithm SHA256 | Format-List
+          Get-FileHash 'publish/L0N.GameLauncher.exe' -Algorithm SHA256 | Format-List
+          Get-FileHash 'dist/L0N_Game_Launcher_Setup.exe' -Algorithm SHA256 | Format-List
 
-      - name: Upload trusted signed Setup only after all checks pass
+      - name: Upload signed Setup only after successful verification
         uses: actions/upload-artifact@v4
         with:
           name: L0N-SIGNED-Windows-Setup
@@ -196,19 +162,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Upload trusted signed portable build
+      - name: Upload verified native portable executable
         uses: actions/upload-artifact@v4
         with:
           name: L0N-SIGNED-Windows-Portable
           path: launcher-wpf/publish/**
           if-no-files-found: error
           retention-days: 30
-
-      - name: Remove imported certificate from ephemeral runner
-        if: always()
-        shell: pwsh
-        run: |
-          $thumb = $env:L0N_SIGNER_THUMBPRINT
-          if ($thumb -and (Test-Path "Cert:\CurrentUser\My\$thumb")) {
-            Remove-Item "Cert:\CurrentUser\My\$thumb" -Force
-          }
