@@ -1,59 +1,19 @@
-# L0N Auto Game Sources — Falas në GitHub
+# L0N – katalog automatik nga 3 website (vetëm metadata)
 
-Ky është gjeneruesi që krijon automatikisht `games.json` për L0N Launcher. Nuk ka nevojë të shkruash lojërat një nga një. GitHub Actions e ekzekuton çdo ditë, ose kur prek **Run workflow**.
+Kjo shtesë lexon, kur janë publikisht të disponueshme, **titujt**, **datën** dhe **linkun e faqes së artikullit** nga SteamRIP, FitGirl dhe DODI. Nuk mbledh magnet, crack, instalues apo lidhje shkarkimi të lojërave. Respekton përgjigjet HTTP 403 dhe nuk përpiqet t'i anashkalojë.
 
-**Kujdes:** Katalogu mbledh vetëm publikime për Windows nga projektet e lojërave në GitHub me download zyrtar. **Nuk** përfshin automatikisht lojërat komerciale 2000–2026, lojëra nga faqe repack, apo licencat e tyre. Kodet nuk ekzekutojnë dhe nuk instalojnë asnjë skedar të shkarkuar. Për shkarkimet nga projekte të zbuluara automatikisht, verifiko besueshmërinë dhe nënshkrimin e botuesit para instalimit.
+## Hapat në repository `lon-game-sources`
 
-## Hapi 1 — Krijo repository (jo Gist)
-1. Hape https://github.com/new dhe kyçu.
-2. Emri: `lon-game-sources`.
-3. Zgjedh **Public** dhe kliko **Create repository**.
-4. Shkarko këtë ZIP dhe bëj **Extract All** në PC.
+1. Ngarko në rrënjën e repository-t `site_catalog.py` dhe `sites_config.json` përmes **Add file → Upload files → Commit changes**.
+2. Hape skedarin ekzistues `.github/workflows/update-games.yml`, kliko lapsin **Edit**, dhe zëvendëso krejt përmbajtjen me YAML-in nga kjo paketë. Bëj **Commit changes**.
+3. Shko te **Actions → Update L0N Game Source → Run workflow**.
+4. Te **Code** kontrollo që janë krijuar `website_catalog.json` dhe `website_status.json`. Status tregon cilat site u hapën e cilat jo.
 
-## Hapi 2 — Ngarko skedarët e gjeneruesit
-Në repository të ri përdor **Add file → Upload files** për skedarët `generate.py`, `config.json`, `README_SHQIP.md` (mund edhe `tests/`). Kliko **Commit changes**.
+Linku i metadata-katalogut (ndërro USERNAME me emrin tënd):
+`https://raw.githubusercontent.com/USERNAME/lon-game-sources/main/website_catalog.json`
 
-## Hapi 3 — Krijo GitHub Action
-1. Kliko **Add file → Create new file**.
-2. Te emri i skedarit shkruaj pikërisht `.github/workflows/update-games.yml`.
-3. Hape skedarin me të njëjtin emër brenda këtij ZIP (me Notepad), kopjo tekstin dhe ngjite në GitHub.
-4. Kliko **Commit changes**.
-5. Te **Settings → Actions → General → Workflow permissions**, sigurohu që lejohet `Read and write permissions` (kur repo-ja e ofron), pastaj **Save**.
+`games.json` vazhdon të mbajë download-et zyrtare/open-source nga GitHub Releases. **L0N ekzistues nuk e lexon `website_catalog.json` te GAMES**, sepse ka një format tjetër dhe nuk përmban linke direkte për instalim. Për ta shfaqur këtë metadata-katalog në aplikacion duhet shtuar faqja `Browse Websites` me butonin **OPEN PAGE** (jo DOWNLOAD). Mos e vendos `pageUrl` si `uris` për shkarkim: do të shkarkonte një faqe HTML në vend të lojës.
 
-## Hapi 4 — Gjenero automatikisht
-1. Shko te **Actions**.
-2. Zgjidh **Update L0N Game Source**.
-3. Kliko **Run workflow → Run workflow**.
-4. Prit derisa puna të bëhet me shenjë të gjelbër.
-5. Kthehu te **Code**. Duhet të shfaqet `games.json`.
+Nëse cilido website kthen 403, Cloudflare, timeout ose nuk ka API/RSS publik, ai shënohet në `website_status.json` si `unavailable` dhe katalogu nuk mbushet për atë website. Nuk garantohen të dhëna nga këto tri faqe.
 
-## Hapi 5 — Lidhu me L0N Launcher
-Nëse përdoruesi yt në GitHub është `EMRIYT`, linku është:
-
-`https://raw.githubusercontent.com/EMRIYT/lon-game-sources/main/games.json`
-
-Zëvendëso `EMRIYT` me emrin tënd të GitHub, pastaj vendose linkun te **L0N → SOURCES → LOAD GAMES**. Nëse repo-ja përdor degën `master`, zëvendëso `main` me `master`.
-
-`games.json` krijohet nga veprimi i parë, jo nga ZIP-i. Nëse gjenerimi dështon, hap **Actions** dhe shiko logun e hapit *Build games.json*.
-
-## Zgjerimi i katalogut
-Te `config.json` ke dy lloje burimesh:
-- `verified_project_candidates`: disa projekte të njohura të lojërave. Programi shkarkon metadatat e versioneve të tyre automatikisht.
-- `auto_discovery`: kërkim automatik për projekte të tjera open-source me publikime për Windows. Nuk garanton që çdo projekt i zbuluar është lojë cilësore apo binar i sigurt. Ndrysho `max_repositories` deri në 100, sipas kufijve të API-së.
-
-Kur përditësohet JSON, e **njëjta lidhje** vazhdon të përdoret. Në L0N mund të të duhet të shtypësh sërish LOAD GAMES për rifreskim nëse launcher-i nuk e rifreskon vetë.
-
-## Për test lokal në Windows
-Me Python 3 të instaluar, hap CMD te folderi dhe nis:
-
-`python generate.py --config config.json --output games.json`
-
-Për testet pa internet:
-
-`python -m unittest discover -s tests -v`
-
-## Kufizime
-- Funksionon për ato lojëra që publikojnë një skedar Windows të shkarkueshëm (`.zip`, `.exe`, `.msi`, `.7z`) në GitHub Releases.
-- Nëse Github API ka rate-limit ose një projekt nuk ka release Windows, ai anashkalohet. Nëse s'ka asnjë rezultat, nuk e mbishkruan JSON-in e mëparshëm.
-- Skedarët e një loje nuk instalohen automatikisht. Në veçanti, një `.exe` është vetëm download; L0N nuk e ekzekuton vetë.
-- GitHub Actions nuk e përditëson katalogun derisa ta aktivizosh në repository tënd. Për të kontrolluar lojëra të paguara përdor API-të zyrtare dhe licencat përkatëse, jo linke që shpërndajnë përmbajtje pa autorizim.
+Për lojëra me shkarkime të lejuara, `games.json` vazhdon të punojë si më parë.
