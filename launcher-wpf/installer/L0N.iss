@@ -30,6 +30,12 @@ VersionInfoVersion=0.1.0.0
 VersionInfoDescription=L0N Game Launcher Setup
 WizardResizable=yes
 
+; Only the explicitly approved signing workflow enables Authenticode signatures.
+#ifdef SIGNED_BUILD
+SignTool=l0nauth
+SignedUninstaller=yes
+#endif
+
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
