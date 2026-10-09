@@ -1,55 +1,27 @@
-# L0N Game Launcher — nënshkrimi digjital në Windows
+# L0N — Saktësim i nënshkrimit digjital
 
-## Gjendja
-- Build-et e mëparshme të L0N janë **UNSIGNED**.
-- Workflow i ri `Sign L0N Windows (Azure Artifact Signing)` ka `preflight` dhe `sign`.
-- `preflight` vetëm kompilon/teston. **Nuk është nënshkrim digjital**.
-- `sign` përdor Microsoft Azure Artifact Signing dhe publikon artefakte `SIGNED` vetëm kur **si EXE ashtu edhe Setup.exe** verifikohen me SignTool dhe testi i instalimit kalon.
-- Uninstaller-i i Inno Setup aktualisht nuk është i nënshkruar; duhet konfigurim i veçantë i `SignedUninstaller` për nënshkrim në kohën e kompilimit.
+**Dokumenti kryesor është [SIGNING.md](./SIGNING.md).** Lexoje para se të marrësh certifikatën.
 
-## Duhet identitet i verifikuar
-Certifikata e besuar publike **nuk mund të krijohet nga ChatGPT**. Lëshohet nga autoritet i besuar pas verifikimit të botuesit.
+## Procesi aktual në GitHub
+- Workflow aktiv: `.github/workflows/sign-l0n-windows.yml` — `Sign L0N Native Windows Release`.
+- Ky workflow nis vetëm manualisht, përdor environment `code-signing`, RSA Authenticode SHA-256, timestamp RFC3161, Inno Setup SignTool dhe `SignedUninstaller=yes`.
+- Nënshkruan dhe verifikon programin kryesor, instaluesin dhe çinstaluesin në një mjedis Windows. Publikon `L0N-SIGNED-Windows-Setup` vetëm pas suksesit.
+- Build-et që kaluan CI më parë janë **UNSIGNED**. Nuk janë certifikatë apo provë reputacioni Windows.
 
-**Microsoft Azure Artifact Signing Public Trust (tetor 2026):** Microsoft kufizon vendet ku ofrohet. Individët duhet të jenë në SHBA ose Kanada; organizatat në një grup tjetër vendesh të listuara. Kosova nuk figuron në listë. Një certifikatë `Private Trust` nuk i zëvendëson certifikatat e besuara publikisht në Windows.
+## Çka mungon
+**Nuk është konfiguruar një certifikatë publike e besuar e lëshuar për pronarin.** ChatGPT nuk mund të kryejë verifikimin e identitetit te autoriteti lëshues.
+
+Workflow ekzistues kërkon environment secrets `L0N_SIGNING_PFX_BASE64` dhe `L0N_SIGNING_PFX_PASSWORD` te GitHub Settings → Environments → code-signing.
+**Kujdes:** Shumë certifikata të reja Code Signing kanë private key në HSM/cloud signer dhe nuk eksportohen si PFX. Në këtë rast duhet përshtatur workflow sipas ofruesit. Mos ngarko kurrë private key në repo publik ose në chat.
+
+Microsoft Azure Artifact Signing është alternativë vetëm për përdorues që kualifikohen për identitetin Public Trust. Sipas dokumentacionit zyrtar (tetor 2026), individët Public Trust duhet të jenë në SHBA/Kanada; Kosova nuk figuron në listën e vendeve të kualifikuara për organizatat. Profilet Private Trust nuk ofrojnë të njëjtin besim publik.
 https://learn.microsoft.com/en-us/azure/artifact-signing/quickstart
 
-Nëse nuk je i kualifikuar për Azure Public Trust, pyet DigiCert, Sectigo ose GlobalSign nëse mund të lëshojnë **Code Signing** për identitetin/juridiksionin tënd. Konfirmo pranueshmërinë përpara pagesës.
+Nëse je në Kosovë, pyet një autoritet lëshues të certifikatave (p.sh. DigiCert, Sectigo, GlobalSign) nëse mbështet individët ose bizneset e regjistruara në Kosovë dhe çfarë mënyre nënshkrimi/HSM ofron. Konfirmo para pagesës.
 
-## Nëse ke llogari Azure Artifact Signing Public Trust
-1. Krijo llogarinë, përfundo identity validation dhe krijo profilin `Public Trust`.
-2. Krijo Entra App Registration dhe Federated Identity Credential (GitHub OIDC, branch `main`), dhe jepi aplikacionit rolin **Artifact Signing Certificate Profile Signer** për profilin.
-3. Shko në GitHub repository → Settings → Secrets and variables → Actions. Fut këto vlera **vetëm në GitHub**, jo në bisedë:
+## Siguria
+- Mos çaktivizo Smart App Control, antivirus ose politikat e IT-së.
+- Nënshkrimi i vlefshëm nuk garanton se një PC pune do ta pranojë programin; reputacioni dhe politikat e organizatës ndikojnë ende.
+- Asnjë artefakt nuk duhet të quhet SIGNED pa verifikim të vërtetë të nënshkrimit dhe identitetit.
 
-**Repository secrets**:
-- `L0N_AZURE_CLIENT_ID`
-- `L0N_AZURE_TENANT_ID`
-- `L0N_AZURE_SUBSCRIPTION_ID`
-
-**Repository variables**:
-- `L0N_SIGNING_ENDPOINT` — endpoint i rajonit të llogarisë tënde, p.sh. `https://eus.codesigning.azure.net/` vetëm si shembull
-- `L0N_SIGNING_ACCOUNT` — emri i llogarisë tënde Azure Artifact Signing
-- `L0N_CERT_PROFILE` — emri i profilit të certifikatës Public Trust
-
-4. Hap GitHub → Actions → **Sign L0N Windows (Azure Artifact Signing)** → Run workflow → `sign`. Duhet main branch.
-5. Workflow verifikon EXE, Setup.exe dhe EXE të instaluar (`signtool verify /pa /all /v /tw`). Artefaktet `SIGNED` krijohen vetëm kur të gjitha testet kalojnë.
-
-## Nënshkrimi me certifikatë tjetër
-Për certifikatë Code Signing të një CA-je tjetër me HSM/token ose remote signer, përdor SignTool sipas dokumentimit të provider-it. Shembull **vetëm kur certifikata është instaluar e aksesueshme**:
-
-```powershell
-signtool sign /a /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 'L0N.GameLauncher.exe'
-signtool verify /pa /all /v /tw 'L0N.GameLauncher.exe'
-# Pastaj kompilo Inno Setup me EXE-në tashmë të nënshkruar.
-signtool sign /a /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 'L0N_Game_Launcher_Setup.exe'
-signtool verify /pa /all /v /tw 'L0N_Game_Launcher_Setup.exe'
-```
-
-Për uninstaller-in e Inno Setup, shiko dokumentimin për `SignedUninstaller` dhe `SignTool`; nënshkrimi i installerit pas kompilimit nuk nënshkruan automatikisht uninstaller-in.
-
-## Kujdes
-- Asnjë certifikatë, çelës privat, PFX, password ose token nuk duhet futur në GitHub source ose në ChatGPT.
-- Mos e çaktivizo Smart App Control/antivirusin për të instaluar aplikacionin.
-- Edhe një aplikacion i nënshkruar mund të bllokohet nga Smart App Control / SmartScreen ose nga politikat e kompjuterit të punës.
-- Nënshkrimi dhe vulosja kohore SHA-256 nuk janë provë që programi nuk ka gabime.
-
-Burime: https://github.com/Azure/artifact-signing-action , https://learn.microsoft.com/en-us/windows/win32/seccrypto/using-signtool-to-verify-a-file-signature , https://jrsoftware.org/ishelp/
+Burimet: [Microsoft Authenticode](https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool), [Inno Setup SignedUninstaller](https://jrsoftware.org/ishelp/index.php?topic=setup_signeduninstaller), [Microsoft Artifact Signing](https://learn.microsoft.com/en-us/azure/artifact-signing/quickstart).
