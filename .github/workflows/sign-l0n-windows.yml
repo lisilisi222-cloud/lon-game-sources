@@ -92,13 +92,13 @@ jobs:
               throw "The code-signing certificate is not currently valid"
             }
             $codeSigningOid = "1.3.6.1.5.5.7.3.3"
-            $eku = $cert.Extensions | Where-Object { $_.Oid.Value -eq "2.5.29.37" } | Select-Object -First 1
-            if (-not $eku -or -not $eku.Format($false).Contains($codeSigningOid)) {
-              # Use native certificate extension decoding so the test doesn't depend on localized display names.
-              $usageExtension = [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension]::new($eku, $false)
-              if (-not ($usageExtension.EnhancedKeyUsages | Where-Object { $_.Value -eq $codeSigningOid })) {
-                throw "The supplied certificate is not valid for Authenticode code signing"
-              }
+            $eku = $cert.Extensions |
+              Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] } |
+              Select-Object -First 1
+            if (-not $eku) { throw "No Enhanced Key Usage extension was found on the signing certificate" }
+            $allowed = @($eku.EnhancedKeyUsages | Where-Object { $_.Value -eq $codeSigningOid })
+            if ($allowed.Count -eq 0) {
+              throw "The supplied certificate is not valid for Authenticode code signing"
             }
 
             $thumb = $cert.Thumbprint
