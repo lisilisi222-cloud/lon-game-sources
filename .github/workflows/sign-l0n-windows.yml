@@ -143,7 +143,7 @@ jobs:
           # $q is replaced with quotation marks and $f with each file path.
           # Passwords and private keys are never placed into command-line args.
           $signCommand = '$q' + $pwshPath + '$q -NoProfile -NonInteractive -File $q' + $helper + '$q $f'
-          & $iscc '--define=SIGNED_BUILD' "--signtool=l0nauth=$signCommand" 'installer\L0N.iss'
+          & $iscc '/DSIGNED_BUILD' ("/Sl0nauth=" + $signCommand) 'installer\L0N.iss'
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup signing failed" }
 
           $setup = (Resolve-Path "dist/L0N_Game_Launcher_Setup.exe").Path
