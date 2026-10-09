@@ -7,6 +7,7 @@ on:
       - '.github/workflows/build-l0n-windows.yml'
       - 'launcher-wpf/bundle/**'
       - 'launcher-wpf/.gitignore'
+      - 'launcher-wpf/signing/**'
       - 'launcher-wpf/installer/**'
       - 'launcher-wpf/scripts/**'
       - 'launcher-wpf/L0N.Launcher/**'
@@ -29,6 +30,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Validate personal signing script (syntax only; no certificate required)
+        shell: pwsh
+        run: |
+          $scriptPath = "launcher-wpf/signing/Sign-L0N-Release.ps1"
+          if (-not (Test-Path -LiteralPath $scriptPath)) { throw "Signing tool is missing" }
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $scriptPath), [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors -and $parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            throw "L0N code-signing script syntax verification failed"
+          }
+          $code = Get-Content -LiteralPath $scriptPath -Raw
+          if ($code -notmatch "Sign-Verified" -or $code -notmatch "Get-AuthenticodeSignature") {
+            throw "Signing script is missing Authenticode signature verification"
+          }
+          Write-Host "PASS: Developer signing script syntax verified. No file signed in this CI run."
 
       - name: Set up Python for source bundle verification
         uses: actions/setup-python@v5
