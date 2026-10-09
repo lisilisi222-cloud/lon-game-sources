@@ -78,6 +78,29 @@ jobs:
         working-directory: launcher-wpf
         run: python scripts/verify_source.py
 
+      - name: Check code-signing PowerShell and Inno recipe (no certificate needed)
+        working-directory: launcher-wpf
+        shell: pwsh
+        run: |
+          $helper = (Resolve-Path 'scripts/sign-inno-output.ps1').Path
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($helper, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            throw "Signing script syntax errors: $($errors -join '; ')"
+          }
+          $inno = Get-Content 'installer/L0N.iss' -Raw
+          foreach ($required in @('#ifdef SIGNED_BUILD','SignTool=l0nauth','SignedUninstaller=yes')) {
+            if (-not $inno.Contains($required)) {
+              throw "Signed Inno Setup recipe missing: $required"
+            }
+          }
+          $workflow = Get-Content '../.github/workflows/sign-l0n-windows.yml' -Raw
+          if (-not $workflow.Contains('environment: code-signing')) {
+            throw 'Signing must remain in the dedicated protected environment'
+          }
+          Write-Output 'PASS: signing helper parses; Inno Setup signed app and uninstaller settings present'
+          
       - name: Install .NET 8 SDK
         uses: actions/setup-dotnet@v4
         with:
