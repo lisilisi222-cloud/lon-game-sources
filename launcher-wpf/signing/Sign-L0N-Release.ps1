@@ -67,14 +67,8 @@ $buildArgs=@('publish',(Join-Path $root 'L0N.Launcher\L0N.Launcher.csproj'),'--c
 Check-Exit 'dotnet publish'
 if(-not (Test-Path -LiteralPath $app -PathType Leaf)){throw "Missing published executable: $app"}
 
-function Sign-Verified([string]$file){
-  if(-not (Test-Path -LiteralPath $file -PathType Leaf)){throw "Missing file: $file"}
-  $argsSign=@('sign','/sha1',$thumb,'/s','My')
-  if($CertificateStore -eq 'LocalMachine'){$argsSign+=@('/sm')}
-  $argsSign+=@('/fd','SHA256','/tr',$TimestampServer,'/td','SHA256','/v',$file)
-  & $signtool @argsSign
-  Check-Exit "Signing $file"
-  & $signtool verify /pa /all /v $file
+function Assert-TrustedSignature([string]$file){
+  & $signtool verify /pa /all /v /tw $file
   Check-Exit "Verifying $file"
   $verified=Get-AuthenticodeSignature -LiteralPath $file
   if($verified.Status -ne 'Valid' -or -not $verified.SignerCertificate){
@@ -86,12 +80,26 @@ function Sign-Verified([string]$file){
   if(-not $verified.TimeStamperCertificate){throw "Missing trusted timestamp on $file"}
   Write-Host "VERIFIED: $file"
 }
+function Sign-Verified([string]$file){
+  if(-not (Test-Path -LiteralPath $file -PathType Leaf)){throw "Missing file: $file"}
+  $argsSign=@('sign','/sha1',$thumb,'/s','My')
+  if($CertificateStore -eq 'LocalMachine'){$argsSign+=@('/sm')}
+  $argsSign+=@('/fd','SHA256','/tr',$TimestampServer,'/td','SHA256','/v',$file)
+  & $signtool @argsSign
+  Check-Exit "Signing $file"
+  Assert-TrustedSignature $file
+}
 
-# Correct order: sign app -> package in Inno Setup -> sign installer.
+# Order: sign app, then have Inno Setup sign embedded uninstaller and final setup.
 Sign-Verified $app
-& $iscc (Join-Path $root 'installer\L0N.iss')
-Check-Exit 'Inno Setup'
-Sign-Verified $setup
+$helper=(Resolve-Path (Join-Path $root 'scripts\sign-inno-output.ps1')).Path
+$psExecutable=(Get-Process -Id $PID).Path
+$env:L0N_SIGNTOOL_PATH=$signtool
+$env:L0N_SIGNER_THUMBPRINT=$thumb
+$signCommand='$q'+$psExecutable+'$q -NoProfile -NonInteractive -File $q'+$helper+'$q $f'
+& $iscc '/DSIGNED_BUILD' ('/Sl0nauth='+$signCommand) (Join-Path $root 'installer\L0N.iss')
+Check-Exit 'Inno Setup signed app, embedded uninstaller and setup'
+Assert-TrustedSignature $setup
 
 Write-Host 'SUCCESS: L0N app and setup are signed and verified with SHA256 and timestamp.'
 Get-FileHash -Algorithm SHA256 -Path @($app,$setup) | Format-Table Path,Hash -AutoSize
