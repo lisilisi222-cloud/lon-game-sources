@@ -1,27 +1,28 @@
-# L0N — Saktësim i nënshkrimit digjital
+# L0N — Udhëzues i shkurtër për nënshkrimin digjital
 
-**Dokumenti kryesor është [SIGNING.md](./SIGNING.md).** Lexoje para se të marrësh certifikatën.
+**Statusi: NUK ka certifikatë Code Signing të besuar. Setup.exe dhe L0N.GameLauncher.exe janë ende të panënshkruar.**
 
-## Procesi aktual në GitHub
-- Workflow aktiv: `.github/workflows/sign-l0n-windows.yml` — `Sign L0N Native Windows Release`.
-- Ky workflow nis vetëm manualisht, përdor environment `code-signing`, RSA Authenticode SHA-256, timestamp RFC3161, Inno Setup SignTool dhe `SignedUninstaller=yes`.
-- Nënshkruan dhe verifikon programin kryesor, instaluesin dhe çinstaluesin në një mjedis Windows. Publikon `L0N-SIGNED-Windows-Setup` vetëm pas suksesit.
-- Build-et që kaluan CI më parë janë **UNSIGNED**. Nuk janë certifikatë apo provë reputacioni Windows.
+Lexo dokumentin kryesor [SIGNING.md](./SIGNING.md) për konfigurimin teknik dhe kufizimet e sigurisë.
 
-## Çka mungon
-**Nuk është konfiguruar një certifikatë publike e besuar e lëshuar për pronarin.** ChatGPT nuk mund të kryejë verifikimin e identitetit te autoriteti lëshues.
+## Çka është përgatitur në GitHub?
 
-Workflow ekzistues kërkon environment secrets `L0N_SIGNING_PFX_BASE64` dhe `L0N_SIGNING_PFX_PASSWORD` te GitHub Settings → Environments → code-signing.
-**Kujdes:** Shumë certifikata të reja Code Signing kanë private key në HSM/cloud signer dhe nuk eksportohen si PFX. Në këtë rast duhet përshtatur workflow sipas ofruesit. Mos ngarko kurrë private key në repo publik ose në chat.
+- **Build L0N Native Windows Setup**: ndërton/teston aplikacionin dhe e publikon si `UNSIGNED`.
+- **Sign L0N Native Windows Release**: nis vetëm manualisht nga `main` me environment `code-signing` dhe një runner Windows të dedikuar me label `l0n-codesign`. Nënshkruan aplikacionin, Setup dhe Uninstaller, bën verifikim të identitetit dhe timestamp-it, pastaj publikon artefakte `SIGNED` vetëm nëse kalojnë të gjitha testet.
+- Nuk ngarkojmë PFX, private key ose PIN në GitHub. Për rrjedhën aktuale kërkohet certifikatë e vërtetë RSA e lëshuar nga CA e besuar, me çelës në token/HSM ose Windows KSP të ofruesit.
 
-Microsoft Azure Artifact Signing është alternativë vetëm për përdorues që kualifikohen për identitetin Public Trust. Sipas dokumentacionit zyrtar (tetor 2026), individët Public Trust duhet të jenë në SHBA/Kanada; Kosova nuk figuron në listën e vendeve të kualifikuara për organizatat. Profilet Private Trust nuk ofrojnë të njëjtin besim publik.
-https://learn.microsoft.com/en-us/azure/artifact-signing/quickstart
+## Çka duhet me siguru ti?
 
-Nëse je në Kosovë, pyet një autoritet lëshues të certifikatave (p.sh. DigiCert, Sectigo, GlobalSign) nëse mbështet individët ose bizneset e regjistruara në Kosovë dhe çfarë mënyre nënshkrimi/HSM ofron. Konfirmo para pagesës.
+1. Pyet një ofrues të certifikatave Code Signing që **pranon regjistrimin/dokumentet e tua** (nëse je në Kosovë, konfirmoje drejtpërdrejt).
+2. Kërko **RSA Code Signing** të besuar publikisht nga Microsoft, jo certifikatë SSL, vetë-nënshkruar ose ECC.
+3. Pyete a punon me Windows `signtool.exe` përmes USB token/KSP/HSM, ose a kërkon shërbim API. Kjo vendos cili workflow duhet të përdoret.
+4. Për nënshkrim direkt në GitHub duhet një Windows runner i dedikuar, environment me aprovim, `main` i mbrojtur dhe variabla publike `L0N_CERT_THUMBPRINT`. Mos vendos PFX ose PIN në GitHub.
+5. Dërgo vetëm **emrin e ofruesit dhe llojin e shërbimit** për konfigurim të mëtejshëm; asnjë sekret.
 
-## Siguria
-- Mos çaktivizo Smart App Control, antivirus ose politikat e IT-së.
-- Nënshkrimi i vlefshëm nuk garanton se një PC pune do ta pranojë programin; reputacioni dhe politikat e organizatës ndikojnë ende.
-- Asnjë artefakt nuk duhet të quhet SIGNED pa verifikim të vërtetë të nënshkrimit dhe identitetit.
+## Rregullat e sigurisë
 
-Burimet: [Microsoft Authenticode](https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool), [Inno Setup SignedUninstaller](https://jrsoftware.org/ishelp/index.php?topic=setup_signeduninstaller), [Microsoft Artifact Signing](https://learn.microsoft.com/en-us/azure/artifact-signing/quickstart).
+- Mos e fik Smart App Control dhe mos anashkalo politikat e kompjuterit të punës.
+- Asnjë `SIGNED` nuk publikohet pa verifikimin real të skedarëve.
+- Certifikata nuk garanton vetvetiu leje në kompjuterët e punës.
+- Mos përdor runner të hapur për PR/fork të pabesuar: një runner publik me çelës nënshkrimi është veçanërisht i ndjeshëm.
+
+Burime: [Microsoft Smart App Control](https://learn.microsoft.com/en-us/windows/apps/develop/smart-app-control/code-signing-for-smart-app-control), [CA/B Forum](https://cabforum.org/working-groups/code-signing/requirements/).
