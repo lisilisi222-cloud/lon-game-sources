@@ -61,6 +61,9 @@ jobs:
           print(f"Verified and unpacked {len(members)} native WPF project entries")
           '@ | python -
 
+      - name: Install WPF source verifier dependency
+        run: python -m pip install --disable-pip-version-check lxml==6.0.2
+
       - name: Validate WPF XAML and event references
         working-directory: launcher-wpf
         run: python scripts/verify_source.py
