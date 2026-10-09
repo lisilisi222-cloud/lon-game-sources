@@ -15,8 +15,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  security-preflight:
+    name: Reject unsafe public-repository signing configuration
+    runs-on: windows-latest
+    steps:
+      - name: Require private repository and reviewed main
+        shell: pwsh
+        env:
+          REPO_VISIBILITY: ${{ github.repository_visibility }}
+          GIT_REF: ${{ github.ref }}
+        run: |
+          if ($env:REPO_VISIBILITY -ne 'private') {
+            throw 'Do NOT register a hardware-key self-hosted signing runner in a public repository. Use an isolated private signing repository or a provider-managed cloud signing integration.'
+          }
+          if ($env:GIT_REF -ne 'refs/heads/main') {
+            throw 'Trusted signing is permitted only on reviewed main.'
+          }
+
   sign-verify-and-package:
     name: Build, sign, and verify native Windows release
+    needs: security-preflight
     if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, Windows, X64, l0n-codesign]
     environment: code-signing
