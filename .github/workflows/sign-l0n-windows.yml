@@ -132,23 +132,23 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $iss = Get-Content "installer/L0N.iss" -Raw -Encoding UTF8
-          if (-not $iss.Contains("[Setup]")) { throw "Invalid Inno Setup script" }
-          $signedIss = $iss.Replace("[Setup]", "[Setup]`r`nSignTool=L0NSign`r`nSignedUninstaller=yes")
-          [IO.File]::WriteAllText((Join-Path (Get-Location) "installer/L0N.signed.iss"), $signedIss, [Text.Encoding]::UTF8)
-
-          $signTool = $env:L0N_SIGNTOOL_PATH
-          $thumbprint = $env:L0N_SIGNER_THUMBPRINT
-          if (-not $signTool -or -not $thumbprint) { throw "Signing certificate was not imported correctly" }
-          $command = '"' + $signTool + '" sign /sha1 ' + $thumbprint +
-            ' /s My /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $f'
-          $signArgument = "/SL0NSign=$command"
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" $signArgument "installer/L0N.signed.iss"
-          if ($LASTEXITCODE -ne 0) { throw "Signing the Setup or Uninstaller failed" }
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          $helper = (Resolve-Path "scripts/sign-inno-output.ps1").Path
+          $pwshPath = (Get-Command pwsh -ErrorAction Stop).Source
+          if (-not $env:L0N_SIGNTOOL_PATH -or -not $env:L0N_SIGNER_THUMBPRINT) {
+            throw "Verified signing identity was not imported"
+          }
+          # The Inno script uses conditional SIGNED_BUILD directives:
+          # SignTool=l0nauth, SignedUninstaller=yes.
+          # $q is replaced with quotation marks and $f with each file path.
+          # Passwords and private keys are never placed into command-line args.
+          $signCommand = '$q' + $pwshPath + '$q -NoProfile -NonInteractive -File $q' + $helper + '$q $f'
+          & $iscc '--define=SIGNED_BUILD' "--signtool=l0nauth=$signCommand" 'installer\L0N.iss'
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup signing failed" }
 
           $setup = (Resolve-Path "dist/L0N_Game_Launcher_Setup.exe").Path
-          & $signTool verify /pa /v /tw $setup
-          if ($LASTEXITCODE -ne 0) { throw "The Setup.exe trusted signature verification failed" }
+          & $env:L0N_SIGNTOOL_PATH verify /pa /all /v /tw $setup
+          if ($LASTEXITCODE -ne 0) { throw "Setup.exe does not have a valid, trusted signature" }
           Write-Output "PASS: signed installer and signed embedded uninstaller created"
 
       - name: Test signed installation, installed EXE, and signed uninstaller
