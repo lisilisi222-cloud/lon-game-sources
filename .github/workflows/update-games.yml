@@ -1,4 +1,3 @@
-
 name: Update L0N Game Source
 
 on:
@@ -13,28 +12,29 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 12
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Generate games.json
+      - name: Update official game downloads
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python generate.py --config config.json --output games.json
 
-      - name: Save games.json
+      - name: Collect public website metadata
+        run: python site_catalog.py --config sites_config.json --output website_catalog.json --status website_status.json
+
+      - name: Publish catalogs
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add games.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add games.json website_catalog.json website_status.json
           if ! git diff --cached --quiet; then
-            git commit -m "Update games catalog"
+            git commit -m 'Auto-update L0N sources'
             git push
           fi
-
