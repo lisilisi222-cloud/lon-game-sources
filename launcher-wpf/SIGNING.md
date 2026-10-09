@@ -22,7 +22,13 @@ Ask the certificate provider ALL of the following:
 
 Modern publicly trusted code-signing keys generally must remain protected by hardware/HSM or an authorized signing service; do not use the earlier GitHub PFX upload approach for a newly issued non-exportable key.
 
-## Configure a protected runner (only after choosing the provider)
+## IMPORTANT: this GitHub repository is currently PUBLIC
+
+GitHub advises **against self-hosted signing runners on public repositories**, because untrusted workflow code can compromise a persistent runner and its signing key. For this reason, the proposed signed workflow has a hosted **security-preflight** job that FAILS while the repository visibility is public. **Do not register your token/HSM signing runner to this public repository.**
+
+To enable the self-hosted option, place the release-signing workflow in a **separately protected private repository** (preferred if you want to keep the source public), or change this repository to private only after reviewing GitHub visibility-change consequences. Alternatively use a managed provider cloud-signing workflow on a GitHub-hosted runner once the provider is chosen. Do NOT interpret approval rules alone as sufficient protection for a public self-hosted runner.
+
+## Configure a protected runner (only in an isolated PRIVATE repository and after choosing the provider)
 
 1. Use a **dedicated, locked-down Windows x64 signing machine** / runner account with the vendor's token or HSM-backed Windows key provider installed. Install .NET SDK 8, Windows SDK SignTool and Inno Setup 6.
 2. Register a GitHub Actions **self-hosted** Windows x64 runner with the additional label `l0n-codesign`. The certificate's non-exportable private key must be available to THAT runner identity through `Cert:\\CurrentUser\\My`. Token PIN entry may require provider-specific automation.
