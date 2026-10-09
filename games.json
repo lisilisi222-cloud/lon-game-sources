@@ -1,0 +1,29 @@
+{
+  "name": "L0N Auto Games - Windows",
+  "downloads": [
+    {
+      "title": "Endless Sky",
+      "fileSize": "369.7 MB",
+      "uploadDate": "2026-06-27",
+      "uris": [
+        "https://github.com/endless-sky/endless-sky/releases/download/v0.11.2/EndlessSky-win64-v0.11.2.zip"
+      ]
+    },
+    {
+      "title": "SuperTux",
+      "fileSize": "308.5 MB",
+      "uploadDate": "2026-03-15",
+      "uris": [
+        "https://github.com/SuperTux/supertux/releases/download/v0.7.0/SuperTux-v0.7.0-win64-portable.zip"
+      ]
+    },
+    {
+      "title": "The Powder Toy",
+      "fileSize": "8.7 MB",
+      "uploadDate": "2026-08-08",
+      "uris": [
+        "https://github.com/The-Powder-Toy/The-Powder-Toy/releases/download/v100.1.400/powder-v100.1.400-x86_64-windows-mingw.exe"
+      ]
+    }
+  ]
+}
