@@ -44,8 +44,11 @@ foreach ($item in $Path) {
   if ($signer.PublicKey.Oid.Value -ne '1.2.840.113549.1.1.1') {
     throw "Smart App Control requires an RSA publisher certificate: $file"
   }
-  $eku = @($signer.EnhancedKeyUsageList | Where-Object { $_.ObjectId -eq '1.3.6.1.5.5.7.3.3' })
-  if ($eku.Count -eq 0) {
+  $ekuExtension = $signer.Extensions |
+    Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] } |
+    Select-Object -First 1
+  if (-not $ekuExtension -or
+      @($ekuExtension.EnhancedKeyUsages | Where-Object { $_.Value -eq '1.3.6.1.5.5.7.3.3' }).Count -eq 0) {
     throw "Publisher certificate does not have Code Signing EKU: $file"
   }
   if (-not $signature.TimeStamperCertificate) {
