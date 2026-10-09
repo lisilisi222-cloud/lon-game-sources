@@ -1,0 +1,23 @@
+{
+  "source_name": "L0N Auto Games - Windows",
+  "verified_project_candidates": [
+    {"repo": "SuperTux/supertux", "name": "SuperTux"},
+    {"repo": "Warzone2100/warzone2100", "name": "Warzone 2100"},
+    {"repo": "OpenRA/OpenRA", "name": "OpenRA"},
+    {"repo": "OpenTTD/OpenTTD", "name": "OpenTTD"},
+    {"repo": "endless-sky/endless-sky", "name": "Endless Sky"},
+    {"repo": "The-Powder-Toy/The-Powder-Toy", "name": "The Powder Toy"},
+    {"repo": "MindustryGame/Mindustry", "name": "Mindustry"},
+    {"repo": "C-Dogs-SDL/cdogs-sdl", "name": "C-Dogs SDL"},
+    {"repo": "OpenTyrian/OpenTyrian", "name": "OpenTyrian"}
+  ],
+  "auto_discovery": {
+    "enabled": true,
+    "max_repositories": 45,
+    "min_stars": 200,
+    "queries": [
+      "topic:open-source-game topic:windows stars:>200",
+      "topic:open-source-game stars:>500"
+    ]
+  }
+}
