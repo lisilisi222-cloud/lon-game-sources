@@ -10,6 +10,12 @@ Lexo dokumentin kryesor [SIGNING.md](./SIGNING.md) për konfigurimin teknik dhe 
 - **Sign L0N Native Windows Release**: nis vetëm manualisht nga `main` me environment `code-signing` dhe një runner Windows të dedikuar me label `l0n-codesign`. Nënshkruan aplikacionin, Setup dhe Uninstaller, bën verifikim të identitetit dhe timestamp-it, pastaj publikon artefakte `SIGNED` vetëm nëse kalojnë të gjitha testet.
 - Nuk ngarkojmë PFX, private key ose PIN në GitHub. Për rrjedhën aktuale kërkohet certifikatë e vërtetë RSA e lëshuar nga CA e besuar, me çelës në token/HSM ose Windows KSP të ofruesit.
 
+## Paralajmërim për repository publik
+
+Repository yt është aktualisht **public**. GitHub paralajmëron se një self-hosted runner në repo publik mund të komprometohet. Prandaj workflow i ri refuzon nënshkrimin në një repository publik **para se të niset runner-i i nënshkrimit**. **Mos e lidh USB token/HSM me runner të këtij repository publik.**
+
+Për nënshkrim të automatizuar me token/KSP përdor repository **privat të veçantë** për publikimin e nënshkruar ose, pasi të zgjidhet ofruesi, nënshkrim cloud të menaxhuar në GitHub-hosted runner.
+
 ## Çka duhet me siguru ti?
 
 1. Pyet një ofrues të certifikatave Code Signing që **pranon regjistrimin/dokumentet e tua** (nëse je në Kosovë, konfirmoje drejtpërdrejt).
