@@ -3,6 +3,9 @@ name: Update L0N Game Source
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/update-games.yml'
   schedule:
     - cron: '17 6 * * *'
 
