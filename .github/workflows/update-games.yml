@@ -1,3 +1,4 @@
+
 name: Update L0N Game Source
 
 on:
@@ -8,33 +9,80 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: lon-game-catalog-main
+  cancel-in-progress: false
+
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Update official game downloads
+      - name: Generate games.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python generate.py --config config.json --output games.json
 
-      - name: Collect public website metadata
-        run: python site_catalog.py --config sites_config.json --output website_catalog.json --status website_status.json
-
-      - name: Publish catalogs
+      - name: Generate optional website catalog
+        shell: bash
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add games.json website_catalog.json website_status.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'Auto-update L0N sources'
-            git push
+          if [[ -f site_catalog.py && -f sites_config.json ]]; then
+            if ! python site_catalog.py --config sites_config.json --output website_catalog.json --status website_status.json; then
+              echo "Website metadata update failed; continuing with games.json."
+            fi
+          else
+            echo "Optional website catalog scripts not present; skipping."
           fi
+
+      - name: Save games.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/lon_output"
+          cp games.json "$RUNNER_TEMP/lon_output/games.json"
+          for file in website_catalog.json website_status.json; do
+            if [[ -f "$file" ]]; then
+              cp "$file" "$RUNNER_TEMP/lon_output/$file"
+            fi
+          done
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            cp "$RUNNER_TEMP/lon_output/"*.json ./
+            git add games.json
+            for file in website_catalog.json website_status.json; do
+              if [[ -f "$RUNNER_TEMP/lon_output/$file" ]]; then
+                git add "$file"
+              fi
+            done
+
+            if git diff --cached --quiet; then
+              echo "Catalog already up to date."
+              exit 0
+            fi
+
+            git commit -m "Update L0N game catalog"
+            if git push origin HEAD:main; then
+              echo "games.json saved successfully."
+              exit 0
+            fi
+            echo "Push conflict: retrying ($attempt/3)..."
+          done
+
+          echo "Could not save after 3 attempts. Please inspect the run logs." >&2
+          exit 1
