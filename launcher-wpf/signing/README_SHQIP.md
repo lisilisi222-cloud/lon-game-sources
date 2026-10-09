@@ -7,7 +7,7 @@ Ky projekt është për përdorim personal. **Nuk kërkon kompani për zhvillim.
 - `signing/Sign-L0N-Release.ps1` është **mjet për zhvilluesin**, jo pjesë e Setup-it që u dërgohet përdoruesve.
 - Kompilon WPF `win-x64` me .NET të përfshirë.
 - Nënshkruan **fillimisht `L0N.GameLauncher.exe`**, pastaj e fut në instalues me Inno Setup.
-- Nënshkruan edhe **`L0N_Game_Launcher_Setup.exe`**.
+- Nënshkruan **`L0N_Game_Launcher_Setup.exe` dhe çinstaluesin (uninstaller) të Inno Setup**.
 - Përdor SHA-256 dhe timestamp RFC3161; kontrollon zinxhirin e certifikatës dhe të dyja nënshkrimet.
 - **Ndërpret procesin** nëse certifikata është self-signed, e pavlefshme, pa çelës privat të aksesueshëm, pa përdorimin "Code Signing", ose verifikimi nuk kalon.
 - Nuk merr PIN, pasaportë ose çelës privat në GitHub.
@@ -54,8 +54,9 @@ Shiko *Properties → Digital Signatures* për të dy skedarët. Emri i botuesit
 - Nënshkrimi nuk garanton leje në PC pune: administratorët IT mund të kenë politika të tjera.
 - Mos çaktivizo Smart App Control për testimin e L0N.
 - Mos ngarko `.pfx`, PIN, çelësa privatë, pasaportë ose dokumente personale në repository publik.
-- GitHub Actions aktualisht gjeneron **vetëm artefakte UNSIGNED**. Puna e nënshkrimit me token bëhet në pajisjen tënde të autorizuar.
-- Për certifikata cloud, mund të shtojmë CI signing kur ofruesi konfirmon metodën e autorizimit për GitHub; mos ruaj sekrete pa nevojë.
+- Workflow-i i përditshëm në GitHub publikon artefakte **UNSIGNED**. Ekziston edhe workflow-i i veçantë manual `Sign L0N Native Windows Release`, por ai kërkon një PFX legjitim dhe secrets brenda environment-it `code-signing`; **nuk është aktivizuar me certifikatën tënde**.
+- Certifikatat e reja me hardware token/cloud HSM shpesh **nuk eksportohen si PFX**. Për to përdor mjetin lokal të nënshkrimit ose konfigurimin e ofruesit; **mos tentoni të eksportoni çelësin privat**.
+- Mjeti lokal aktivizon edhe `SignedUninstaller=yes` në Inno Setup për nënshkrimin e çinstaluesit, jo vetëm `Setup.exe`.
 
 ## Burime zyrtare
 
