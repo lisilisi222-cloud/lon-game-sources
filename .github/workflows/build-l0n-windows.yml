@@ -7,6 +7,10 @@ on:
       - '.github/workflows/build-l0n-windows.yml'
       - 'launcher-wpf/bundle/**'
       - 'launcher-wpf/.gitignore'
+      - 'launcher-wpf/installer/**'
+      - 'launcher-wpf/scripts/**'
+      - 'launcher-wpf/L0N.Launcher/**'
+      - 'launcher-wpf/L0N.Core/**'
 
 permissions:
   contents: write
@@ -55,7 +59,13 @@ jobs:
                   pure = pathlib.PurePosixPath(item.name)
                   assert not pure.is_absolute() and ".." not in pure.parts, "Unsafe archive path"
                   assert item.isfile() or item.isdir(), "Unexpected archive member type"
+              # Never overwrite newer readable source files committed to GitHub.
+          # The bundle is a verified bootstrap for old repositories only.
+          if not (folder / "L0N.Launcher" / "L0N.Launcher.csproj").exists():
               tf.extractall(folder, filter="data")
+              print("Restored native WPF source from verified bootstrap archive.")
+          else:
+              print("Using readable source from GitHub; bootstrap archive NOT extracted.")
           assert (folder / "L0N.Launcher" / "L0N.Launcher.csproj").is_file()
           assert (folder / "installer" / "L0N.iss").is_file()
           print(f"Verified and unpacked {len(members)} native WPF project entries")
@@ -136,6 +146,17 @@ jobs:
           }
           if ($test.ExitCode -ne 0) { throw "Installed app failed self-test $($test.ExitCode)" }
           Write-Output "PASS: Silent installation and installed app self-test"
+
+      - name: Verify signed-installer configuration without a certificate
+        working-directory: launcher-wpf
+        shell: pwsh
+        run: |
+          # This dry-run compiles the signed preprocessor branch but does not
+          # sign or claim trust. Actual code signing is a separate protected job.
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" '--no-signing' '--define=SIGNED_BUILD' 'installer\L0N.iss'
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno signed-build configuration is not valid"
+          }
 
       - name: Commit readable source code after verified build
         shell: pwsh
