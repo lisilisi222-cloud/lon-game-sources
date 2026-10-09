@@ -1,0 +1,180 @@
+<Window x:Class="L0N.Launcher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="L0N Game Launcher" Width="1280" Height="790" MinWidth="920" MinHeight="590"
+        WindowStartupLocation="CenterScreen" Background="#0D0F12" Foreground="#F4F7FA"
+        FontFamily="Segoe UI" Loaded="Window_Loaded">
+  <Window.Resources>
+    <Style x:Key="SmallGray" TargetType="TextBlock"><Setter Property="Foreground" Value="#9CA9B7"/><Setter Property="FontSize" Value="12"/></Style>
+    <Style x:Key="PageTitle" TargetType="TextBlock"><Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="Bold"/></Style>
+    <Style x:Key="PanelBorder" TargetType="Border"><Setter Property="Background" Value="#15191E"/><Setter Property="BorderBrush" Value="#30363D"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="12"/><Setter Property="Padding" Value="22"/></Style>
+    <Style x:Key="SmallHeading" TargetType="TextBlock"><Setter Property="FontSize" Value="18"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="0,0,0,15"/></Style>
+  </Window.Resources>
+  <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="215"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <!-- STEAM-LIKE NAVIGATION; ALL UI IS WPF, NOT A WEB BROWSER -->
+    <Border Grid.Column="0" Background="#08090B" BorderBrush="#272B31" BorderThickness="0,0,1,0">
+      <DockPanel Margin="13,23">
+        <StackPanel DockPanel.Dock="Top">
+          <StackPanel Orientation="Horizontal" Margin="12,5,0,29">
+            <Border Background="#043B61" BorderBrush="#1497E4" BorderThickness="1" CornerRadius="11" Width="49" Height="49">
+              <TextBlock Text="L0N" FontSize="18" FontWeight="Black" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <StackPanel Margin="12,5,0,0"><TextBlock Text="L0N" FontSize="22" FontWeight="Bold"/><TextBlock Text="GAME LAUNCHER" Foreground="#8EB4CD" FontSize="9" FontWeight="SemiBold"/></StackPanel>
+          </StackPanel>
+          <Button Style="{StaticResource NavButton}" Name="NavHome" Click="NavHome_Click" Content="⌂     Home"/>
+          <Button Style="{StaticResource NavButton}" Name="NavCatalogue" Click="NavCatalogue_Click" Content="▦     Catalogue"/>
+          <Button Style="{StaticResource NavButton}" Name="NavLibrary" Click="NavLibrary_Click" Content="♡     Library"/>
+          <Button Style="{StaticResource NavButton}" Name="NavDownloads" Click="NavDownloads_Click" Content="⇩     Downloads"/>
+          <Button Style="{StaticResource NavButton}" Name="NavSettings" Click="NavSettings_Click" Content="⚙     Settings"/>
+        </StackPanel>
+        <StackPanel VerticalAlignment="Bottom" DockPanel.Dock="Bottom" Margin="12,0,0,7">
+          <Separator Background="#363C43"/><TextBlock Text="v0.1  •  WPF NATIVE" FontSize="10" FontWeight="SemiBold" Foreground="#7A8FA0" Margin="0,13,0,5"/>
+          <TextBlock Text="No Edge · No local server" FontSize="11" Foreground="#8DA0AC"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions><RowDefinition Height="64"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
+      <Border Background="#101216" Grid.Row="0" BorderBrush="#262B31" BorderThickness="0,0,0,1">
+        <DockPanel Margin="27,0">
+          <TextBlock x:Name="TopPageName" DockPanel.Dock="Left" Text="Home" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+          <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center">
+            <TextBlock Text="L0N  /  DESKTOP APP" Foreground="#889BAA" FontSize="11" VerticalAlignment="Center" Margin="0,0,13,0"/>
+            <Border Background="#23382D" BorderBrush="#38734A" BorderThickness="1" CornerRadius="9" Padding="10,6"><TextBlock Text="●  LOCAL" Foreground="#78E2A5" FontSize="11"/></Border>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+      <Grid Grid.Row="1" Margin="24,22,24,20">
+        <!-- HOME -->
+        <ScrollViewer x:Name="HomePage" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border CornerRadius="15" Height="275" BorderBrush="#28608D" BorderThickness="1">
+              <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#102E43" Offset="0"/><GradientStop Color="#182A37" Offset="0.43"/><GradientStop Color="#09131D" Offset="1"/></LinearGradientBrush></Border.Background>
+              <Grid Margin="29,22">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="490">
+                  <TextBlock Text="YOUR GAMES. ONE PLACE." Foreground="#62C9FF" FontSize="11" FontWeight="Bold"/>
+                  <TextBlock Text="EXPLORE GAMES" FontSize="44" FontWeight="Bold" Margin="0,10,0,7"/>
+                  <TextBlock Text="Your local library, a clear game catalogue, and official downloads — all inside a Windows app." Foreground="#C4D8E5" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,17"/>
+                  <Button Content="BROWSE CATALOGUE   →" Style="{StaticResource PrimaryButton}" Click="NavCatalogue_Click" HorizontalAlignment="Left"/>
+                </StackPanel>
+                <Border Background="#192F40" BorderBrush="#26526F" BorderThickness="1" CornerRadius="15" Width="210" Height="160" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,25,0">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock Text="L0N" FontSize="62" FontWeight="Black" Foreground="#49B9FA" HorizontalAlignment="Center"/><TextBlock Text="NATIVE EDITION" FontSize="11" Foreground="#B9D6E8" HorizontalAlignment="Center"/></StackPanel>
+                </Border>
+              </Grid>
+            </Border>
+            <TextBlock Text="QUICK ACCESS" FontSize="19" FontWeight="Bold" Margin="0,24,0,14"/>
+            <UniformGrid Columns="3">
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,10,0"><StackPanel><TextBlock Text="CATALOGUE" Foreground="#AFC2CD" FontSize="11"/><TextBlock Text="Search and filter" FontSize="19" FontWeight="Bold" Margin="0,9,0,10"/><Button Content="Explore →" Click="NavCatalogue_Click" HorizontalAlignment="Left"/></StackPanel></Border>
+              <Border Style="{StaticResource PanelBorder}" Margin="0,0,10,0"><StackPanel><TextBlock Text="MY LIBRARY" Foreground="#AFC2CD" FontSize="11"/><TextBlock x:Name="HomeLibraryCount" Text="0 saved games" FontSize="19" FontWeight="Bold" Margin="0,9,0,10"/><Button Content="Open Library →" Click="NavLibrary_Click" HorizontalAlignment="Left"/></StackPanel></Border>
+              <Border Style="{StaticResource PanelBorder}"><StackPanel><TextBlock Text="DOWNLOADS" Foreground="#AFC2CD" FontSize="11"/><TextBlock Text="Track transfers" FontSize="19" FontWeight="Bold" Margin="0,9,0,10"/><Button Content="Open Downloads →" Click="NavDownloads_Click" HorizontalAlignment="Left"/></StackPanel></Border>
+            </UniformGrid>
+            <Border Style="{StaticResource PanelBorder}" Margin="0,20,0,0"><StackPanel><TextBlock Text="ABOUT THE CATALOGUE" FontSize="16" FontWeight="Bold"/><TextBlock Text="Steam games are a small metadata demonstration. SteamRIP, FitGirl and DODI entries are website post titles from your existing public GitHub JSON — not direct downloads. Only verified public GitHub releases have a Download button." Foreground="#AAB8C4" TextWrapping="Wrap" Margin="0,11,0,0"/></StackPanel></Border>
+          </StackPanel>
+        </ScrollViewer>
+        <!-- CATALOGUE -->
+        <Grid x:Name="CataloguePage" Visibility="Collapsed">
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <StackPanel Grid.Row="0" Margin="0,0,0,15"><TextBlock Text="Catalogue" Style="{StaticResource PageTitle}"/><TextBlock Text="Filter Steam sample titles and read your three GitHub website catalogues." Foreground="#9EAAB8" Margin="0,5,0,0"/></StackPanel>
+          <Grid Grid.Row="1" Margin="0,0,0,15">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="170"/><ColumnDefinition Width="120"/><ColumnDefinition Width="120"/><ColumnDefinition Width="105"/></Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Name="SearchInput" TextChanged="SearchInput_TextChanged" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="Search games by title"/>
+            <ComboBox Grid.Column="1" x:Name="SourceFilter" SelectionChanged="SourceFilter_SelectionChanged" VerticalAlignment="Center" Margin="0,0,8,0">
+              <ComboBoxItem Content="All" IsSelected="True"/><ComboBoxItem Content="Steam sample"/><ComboBoxItem Content="SteamRIP"/><ComboBoxItem Content="FitGirl"/><ComboBoxItem Content="DODI"/><ComboBoxItem Content="Official"/>
+            </ComboBox>
+            <TextBox Grid.Column="2" Name="YearMin" Text="2005" Margin="0,0,8,0" ToolTip="Minimum year"/>
+            <TextBox Grid.Column="3" Name="YearMax" Text="2026" Margin="0,0,8,0" ToolTip="Maximum year"/>
+            <Button Grid.Column="4" Content="FILTER" Click="Filter_Click"/>
+          </Grid>
+          <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="1.5*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Grid Grid.Column="0" Margin="0,0,11,0"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+              <DockPanel Margin="0,0,0,10"><TextBlock x:Name="CatalogCount" Text="Loading…" Foreground="#B4C7D2" VerticalAlignment="Center"/><Button Content="↻  SYNC GITHUB" Click="Sync_Click" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Right" DockPanel.Dock="Right"/></DockPanel>
+              <ListBox Grid.Row="1" x:Name="CatalogueList" SelectionChanged="CatalogueList_SelectionChanged" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate><DataTemplate><Border BorderBrush="#292F36" BorderThickness="0,0,0,1" Padding="11"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="58"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                  <Border Grid.Column="0" Background="#173952" CornerRadius="9" Width="48" Height="52" HorizontalAlignment="Left"><TextBlock Text="L0N" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#56C3FF" FontWeight="Black"/></Border>
+                  <StackPanel Grid.Column="1"><TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="14" FontWeight="SemiBold"/><TextBlock Text="{Binding SubTitle}" TextWrapping="Wrap" Foreground="#9AABBA" FontSize="11" Margin="0,7,0,0"/></StackPanel>
+                </Grid></Border></DataTemplate></ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+            <Border Grid.Column="1" Style="{StaticResource PanelBorder}"><StackPanel>
+              <TextBlock Text="GAME DETAILS" Foreground="#67C4FA" FontSize="11" FontWeight="Bold"/>
+              <TextBlock x:Name="SelectedTitle" Text="Select a game" FontSize="23" FontWeight="Bold" TextWrapping="Wrap" Margin="0,16,0,10"/>
+              <TextBlock x:Name="SelectedInfo" Text="Select a title on the left to see its details." Foreground="#A6B4C0" FontSize="13" TextWrapping="Wrap" Margin="0,0,0,18"/>
+              <Button x:Name="SaveLibraryButton" Content="＋  ADD TO LIBRARY" Click="SaveLibrary_Click" Style="{StaticResource PrimaryButton}" Margin="0,0,0,10" IsEnabled="False"/>
+              <Button x:Name="DownloadButton" Content="↓  DOWNLOAD OFFICIAL RELEASE" Click="DownloadSelected_Click" Margin="0,0,0,10" IsEnabled="False"/>
+              <Button x:Name="OpenPageButton" Content="↗  OPEN INFORMATION PAGE" Click="OpenPage_Click" IsEnabled="False"/>
+              <TextBlock Text="Website posts are information only. L0N does not invent torrent links or auto-install unknown files." TextWrapping="Wrap" Foreground="#8498A5" FontSize="12" Margin="0,26,0,0"/>
+            </StackPanel></Border>
+          </Grid>
+        </Grid>
+        <!-- LIBRARY -->
+        <Grid x:Name="LibraryPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <StackPanel Margin="0,0,0,20"><TextBlock Text="Library" Style="{StaticResource PageTitle}"/><TextBlock Text="Your saved game entries. Stored locally in SQLite." Foreground="#9EAAB8" Margin="0,5,0,0"/></StackPanel>
+          <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions>
+            <ListBox x:Name="LibraryList"><ListBox.ItemTemplate><DataTemplate><Border Padding="13" BorderBrush="#2A3037" BorderThickness="0,0,0,1"><StackPanel><TextBlock Text="{Binding Title}" FontSize="16" FontWeight="Bold"/><TextBlock Text="{Binding SubTitle}" Foreground="#94A9B7" Margin="0,7,0,0"/></StackPanel></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+            <StackPanel Grid.Column="1" Margin="15,0,0,0"><Button Content="REMOVE SELECTED" Click="RemoveLibrary_Click"/><TextBlock Text="Adding a game to Library saves a bookmark only. Downloading and launching are separate actions." Foreground="#90A0AE" TextWrapping="Wrap" Margin="0,20,0,0"/></StackPanel>
+          </Grid>
+        </Grid>
+        <!-- DOWNLOADS -->
+        <Grid x:Name="DownloadsPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <StackPanel><TextBlock Text="Downloads" Style="{StaticResource PageTitle}"/><TextBlock Text="Track direct files from trusted official GitHub releases. No installation is started automatically." Foreground="#A5B1BE" Margin="0,7,0,17"/></StackPanel>
+          <Border Grid.Row="1" Background="#132839" BorderBrush="#285471" BorderThickness="1" Padding="16" CornerRadius="10" Margin="0,0,0,14"><TextBlock Text="Only verified direct GitHub release files appear here. Website catalogue pages cannot be downloaded as game archives." Foreground="#B6D6E8" TextWrapping="Wrap"/></Border>
+          <ListBox Grid.Row="2" x:Name="DownloadsList"><ListBox.ItemTemplate><DataTemplate><Border BorderBrush="#2D333B" BorderThickness="0,0,0,1" Padding="15"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <DockPanel><TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="15"/><TextBlock Text="{Binding ProgressLabel}" DockPanel.Dock="Right" HorizontalAlignment="Right" Foreground="#65C6FF"/></DockPanel>
+            <ProgressBar Grid.Row="2" Minimum="0" Maximum="100" Value="{Binding Progress}" Height="9"/>
+            <Grid Grid.Row="3" Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="{Binding Status}" Foreground="#9DB1BE" TextWrapping="Wrap"/><TextBlock Grid.Column="1" Text="{Binding Speed}" Margin="10,0" Foreground="#9DB1BE"/><Button Grid.Column="2" Content="CANCEL" Click="CancelDownload_Click" Padding="9,4" Tag="{Binding}"/>
+            </Grid>
+          </Grid></Border></DataTemplate></ListBox.ItemTemplate></ListBox>
+        </Grid>
+        <!-- SETTINGS -->
+        <Grid x:Name="SettingsPage" Visibility="Collapsed"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+          <StackPanel Margin="0,0,0,19"><TextBlock Text="Settings" Style="{StaticResource PageTitle}"/><TextBlock Text="General · Downloads · Download Sources · Notifications · Integrations · Compatibility" Foreground="#A5B1BD" Margin="0,6,0,0"/></StackPanel>
+          <TabControl Grid.Row="1" Background="#121519" Foreground="White" BorderBrush="#303740" TabStripPlacement="Left">
+            <TabItem Header="⚙  General"><ScrollViewer><StackPanel Margin="21,19" MaxWidth="690" HorizontalAlignment="Left">
+              <TextBlock Text="General" Style="{StaticResource SmallHeading}"/><TextBlock Text="Download destination" Foreground="#C7D1D8"/>
+              <TextBox x:Name="DownloadFolderBox" MinWidth="475" Margin="0,9,0,9"/>
+              <Button Content="SAVE FOLDER" Click="SaveFolder_Click" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+              <TextBlock Text="App start page" Margin="0,28,0,9"/>
+              <ComboBox x:Name="StartPageChoice" Width="210" HorizontalAlignment="Left"><ComboBoxItem Content="Home"/><ComboBoxItem Content="Catalogue"/><ComboBoxItem Content="Library"/><ComboBoxItem Content="Downloads"/></ComboBox>
+              <Button Content="SAVE START PAGE" Click="SaveStartPage_Click" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+              <TextBlock Text="Settings and Library are saved per Windows user under LocalAppData\L0NLauncher." Foreground="#9BAEB9" TextWrapping="Wrap" Margin="0,24,0,0"/>
+            </StackPanel></ScrollViewer></TabItem>
+            <TabItem Header="⇩  Downloads"><ScrollViewer><StackPanel Margin="21,19" MaxWidth="690">
+              <TextBlock Text="Downloads" Style="{StaticResource SmallHeading}"/><TextBlock Text="Download settings" FontWeight="SemiBold"/>
+              <TextBlock Text="L0N accepts only verified direct GitHub release URLs in this starter. Files are saved with .part while transferring. No automatic execution, extraction, torrent discovery, VPN bypass, or unverified installer execution." Foreground="#B5C2CE" TextWrapping="Wrap" Margin="0,15,0,0"/>
+              <TextBlock Text="Progress, cancellation and error status are available on the Downloads page." Foreground="#A0B3C1" TextWrapping="Wrap" Margin="0,15,0,0"/>
+            </StackPanel></ScrollViewer></TabItem>
+            <TabItem Header="↗  Download Sources"><ScrollViewer><StackPanel Margin="21,19" MaxWidth="700">
+              <TextBlock Text="Download Sources" Style="{StaticResource SmallHeading}"/><TextBlock Text="Source catalogue sync" Foreground="#9CAEBB" Margin="0,0,0,19" TextWrapping="Wrap"/>
+              <CheckBox x:Name="SteamRipEnabled" Content="SteamRIP  —  website article metadata" Click="SourceSetting_Click"/>
+              <CheckBox x:Name="FitGirlEnabled" Content="FitGirl  —  website article metadata" Click="SourceSetting_Click"/>
+              <CheckBox x:Name="DodiEnabled" Content="DODI  —  website article metadata" Click="SourceSetting_Click"/>
+              <Button Content="↻  SYNC GITHUB CATALOGUES" Click="Sync_Click" HorizontalAlignment="Left" Margin="0,18,0,18" Style="{StaticResource PrimaryButton}"/>
+              <TextBlock x:Name="SourceStatus" Text="Waiting for GitHub sync" Foreground="#7ECCFA" TextWrapping="Wrap"/>
+              <TextBlock Text="These three feeds contain post titles, publication dates and page URLs. They do not contain verified direct archives or torrent magnets." Foreground="#99AEBB" Margin="0,23,0,0" TextWrapping="Wrap"/>
+            </StackPanel></ScrollViewer></TabItem>
+            <TabItem Header="♧  Notifications"><ScrollViewer><StackPanel Margin="21,19" MaxWidth="680">
+              <TextBlock Text="Notifications" Style="{StaticResource SmallHeading}"/>
+              <CheckBox x:Name="CompletionNotifyEnabled" Content="Show an in-app message when an official download completes" Click="NotifySetting_Click"/>
+              <TextBlock Text="Notification settings are local. Windows toast notifications and achievements are not implemented in this starter." Foreground="#9AAFC1" TextWrapping="Wrap" Margin="0,18,0,0"/>
+            </StackPanel></ScrollViewer></TabItem>
+            <TabItem Header="☁  Integrations"><ScrollViewer><StackPanel Margin="21,19" MaxWidth="680">
+              <TextBlock Text="Integrations" Style="{StaticResource SmallHeading}"/>
+              <TextBlock Text="Mbështet integrimin me platforma të ndryshme dhe mjete të komunitetit për të sinkronizuar lojërat dhe për të përmirësuar eksperiencën në pajisje të ndryshme." Foreground="#B2C3CF" TextWrapping="Wrap"/>
+              <TextBlock Text="No third-party accounts are connected in the desktop app. ChatGPT connections are separate. This page does not request API tokens." Foreground="#8296A7" TextWrapping="Wrap" Margin="0,22,0,0"/>
+            </StackPanel></ScrollViewer></TabItem>
+            <TabItem Header="⚒  Compatibility"><ScrollViewer><StackPanel Margin="21,19" MaxWidth="680">
+              <TextBlock Text="Compatibility" Style="{StaticResource SmallHeading}"/>
+              <TextBlock Text="Microsoft .NET Desktop Runtime is included when the app is published self-contained. No automatic downloads of redistributables are performed." Foreground="#B1C2CF" TextWrapping="Wrap"/>
+              <Button Content="OPEN MICROSOFT .NET SUPPORT" Click="OpenDotNet_Click" HorizontalAlignment="Left" Margin="0,19,0,0"/>
+            </StackPanel></ScrollViewer></TabItem>
+          </TabControl>
+        </Grid>
+      </Grid>
+      <Border Grid.Row="2" Background="#0A0C0E" BorderBrush="#20242A" BorderThickness="0,1,0,0">
+        <Grid Margin="22,0"><TextBlock x:Name="FooterStatus" Text="L0N ready." Foreground="#91A1B0" FontSize="11" VerticalAlignment="Center"/><TextBlock Text="L0N · PERSONAL DESKTOP LAUNCHER" Foreground="#7C8B98" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Center"/></Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</Window>
